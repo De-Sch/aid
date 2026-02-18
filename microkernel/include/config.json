@@ -1,0 +1,91 @@
+
+{
+	"TicketSystem": 
+	{
+		"ticketSystemName": "OpenProject",
+		"libPath": "/home/user/projects/aid/build/microkernel/libOpenProject.so",
+		"baseUrl": "http://.../openproject/api/v3/",
+		"projectWebBaseUrl": "http://.../openproject/projects/",
+		"apiToken": "Token for ticketsystem",
+		"user": "http://.../openproject/users/5",
+		"unknownNumberSaveLocation": "if no number for this caller",
+		"fieldCallId": "callid",
+		"fieldCallStart": "call start field timestamp",
+		"fieldCallEnd": "call end field for timestamp",
+		"fieldCalledNumber": "field for called number",
+		"fieldCallerNumber": "field for caller number",
+		"statusNew": "status ID for newly created tickets",
+		"statusInProgress": "status ID for accepted calls",
+		"statusClosed": "status ID for completed calls",
+		"statusRejected": "status ID for rejected calls",
+		"statusTested": "status ID for tested/resolved calls",
+		"typeCall": "OpenProject type ID for Call tickets"
+	},
+	
+	"AddressSystem":
+	{
+		"addressSystemName": "DaviCal",
+		"libPath": "/home/user/projects/aid/build/microkernel/libDaviCal.so",
+		"bookAddresses": "http://.../davical/caldav.php/ingstep/addresses/",
+		"bookCompanies": "http://.../davical/caldav.php/ingstep/companies/",
+		"user": "name",
+		"password": "for the davical server"
+	},
+	
+	"Ticket": 
+	{
+		"ticketName": "WorkPackage",
+		"libPath": "/home/user/projects/aid/build/microkernel/libOpenProject.so"
+	},
+	
+	"Ui":
+	{
+		"uiName": "SvelteUi",
+		"projectWebBaseUrl": "http://.../openproject/projects/",
+		"libPath": "/home/user/projects/aid/build/microkernel/libWebInterface.so"
+	},
+	
+	"Logger": {
+		"logLevel": "TRACE",
+		"paths": {
+			"baseDir": "/path/to/logs",
+			"backendLog": {
+				"filename": "backend.log",
+				"fullPath": "/path/to/logs/backend.log"
+			},
+			"frontendLog": {
+				"filename": "frontend.log",
+				"fullPath": "/path/to/logs/frontend.log"
+			}
+		},
+		"fileSettings": {
+			"backendLog": {
+				"filename": "backend.log",
+				"rotation": {
+					"enabled": true,
+					"maxSize": "10MB",
+					"maxFiles": 5
+				}
+			},
+			"frontendLog": {
+				"filename": "frontend.log",
+				"rotation": {
+					"enabled": true,
+					"maxSize": "10MB",
+					"maxFiles": 5
+				}
+			}
+		},
+		"format": {
+			"timestamp": true,
+			"level": true,
+			"message": true,
+			"type": true
+		},
+		"sampling": {
+			"enabled": false,
+			"rate": 1.0
+		}
+	}
+}
+

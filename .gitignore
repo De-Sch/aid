@@ -1,0 +1,5 @@
+build
+microkernel/*.kdev4
+node_modules
+sveltekit-ui/node_modules
+sveltekit-ui/.svelte-kit

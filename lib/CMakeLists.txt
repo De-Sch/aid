@@ -1,0 +1,16 @@
+add_subdirectory(value-types)
+add_subdirectory(plumbing)
+add_subdirectory(crosscutting)
+add_subdirectory(auth)
+add_subdirectory(domain)
+add_subdirectory(serialization)
+add_subdirectory(ports)
+add_subdirectory(infrastructure)
+add_subdirectory(usecases)
+add_subdirectory(controllers)
+add_subdirectory(adapters/openproject_plugin)
+add_subdirectory(adapters/davical_plugin)
+add_subdirectory(adapters/ws)
+
+# (The former aid_core placeholder target lived here — it held only aid::version().
+# Its accessor now lives in aid_crosscutting/Version.cpp.)

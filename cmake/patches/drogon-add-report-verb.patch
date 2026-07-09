@@ -1,0 +1,55 @@
+Add CardDAV REPORT method to drogon::HttpMethod.
+
+Drogon v1.9.13 ships PROPFIND/MKCOL/COPY/MOVE but not REPORT (RFC 3253 §3).
+DaviCal's address-book queries use REPORT exclusively, so the AID2.0
+DaviCal plugin needs Drogon to serialise the method line as "REPORT".
+
+This patch adds one enum value plus its three switch cases:
+  - HttpTypes.h: enum entry + to_string_view()
+  - HttpRequestImpl.cc: outgoing-request serializer (line 195) +
+    methodString() helper (line 647)
+
+No ABI/semantic changes elsewhere — the new value is appended before
+Invalid so existing integer values stay stable.
+
+--- a/lib/inc/drogon/HttpTypes.h
++++ b/lib/inc/drogon/HttpTypes.h
+@@ -198,6 +198,7 @@ enum HttpMethod
+     Mkcol,
+     Copy,
+     Move,
++    Report,
+     Invalid
+ };
+
+@@ -291,6 +292,8 @@ inline std::string_view to_string_view(drogon::HttpMethod method)
+             return "COPY";
+         case drogon::HttpMethod::Move:
+             return "MOVE";
++        case drogon::HttpMethod::Report:
++            return "REPORT";
+         default:
+             return "INVALID";
+     }
+--- a/lib/src/HttpRequestImpl.cc
++++ b/lib/src/HttpRequestImpl.cc
+@@ -226,6 +226,9 @@ void HttpRequestImpl::appendToBuffer(MsgBuffer *output) const
+         case Move:
+             output->append("MOVE ");
+             break;
++        case Report:
++            output->append("REPORT ");
++            break;
+         default:
+             return;
+     }
+@@ -682,6 +685,9 @@ const char *HttpRequestImpl::methodString() const
+         case Move:
+             result = "MOVE";
+             break;
++        case Report:
++            result = "REPORT";
++            break;
+         default:
+             break;
+     }

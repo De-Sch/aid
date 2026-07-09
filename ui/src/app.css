@@ -1,0 +1,288 @@
+/* ============================================================================
+ * AID2.0 dashboard — global design tokens + reset.
+ *
+ * Design language: calm, dense, distinctive-but-restrained — an all-day operator
+ * tool where at-a-glance scanning beats flourish. One signal accent (teal) is
+ * reserved exclusively for the live-call state; the five ticket statuses map to a
+ * desaturated semantic palette so a full list reads as one calm field, not a
+ * colour grid.
+ *
+ * Theming: every colour is a token, defined for light (:root) and dark. Dark is
+ * chosen by the OS (prefers-color-scheme) unless the operator has pinned a theme
+ * via the header toggle, which sets [data-theme] on <html>. Non-colour tokens
+ * (type scale, spacing, radius, motion) are theme-independent and live in :root.
+ * ========================================================================== */
+
+/* Self-hosted fonts (no external CDN → works same-origin behind the daemon).
+ * Hanken Grotesk = UI chrome; IBM Plex Mono = phone numbers / call IDs / times. */
+@import '@fontsource/hanken-grotesk/400.css';
+@import '@fontsource/hanken-grotesk/500.css';
+@import '@fontsource/hanken-grotesk/600.css';
+@import '@fontsource/hanken-grotesk/700.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+:root {
+	/* — Type — */
+	--font-ui: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+	--font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+	/* Type scale (rem). Numbers always render in --font-mono w/ tabular figures. */
+	--text-xs: 0.72rem;
+	--text-sm: 0.82rem;
+	--text-base: 0.9rem;
+	--text-md: 1rem;
+	--text-lg: 1.3rem;
+	--text-xl: 1.6rem;
+
+	/* Tracking */
+	--track-tight: -0.01em; /* headings, brand */
+	--track-wide: 0.07em; /* eyebrows, column heads, uppercase labels */
+
+	/* — Spacing scale — */
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.5rem;
+	--space-6: 2rem;
+
+	/* — Radius — */
+	--radius-sm: 4px;
+	--radius-md: 8px;
+	--radius-lg: 12px;
+
+	/* — Focus ring (one style, applied everywhere) — */
+	--focus-width: 2px;
+	--focus-offset: 2px;
+
+	/* ====================================================================== *
+	 * LIGHT THEME (default)                                                   *
+	 * ====================================================================== */
+	color-scheme: light;
+
+	/* Neutral ramp — warm, calm. */
+	--color-bg: #f6f5f3;
+	--color-surface: #ffffff;
+	--color-surface-2: #faf9f7; /* header strip, expanded panel, inputs */
+	--color-border: #e6e4e0;
+	--color-border-strong: #d6d3cd; /* hover / focus edges */
+	--color-text: #1b1a17;
+	--color-text-muted: #6c6a63;
+	--color-text-faint: #97948c; /* placeholders, "unassigned" */
+
+	/* One signal accent (teal) — reserved for the live-call state. Sits clearly
+	 * apart from all five status hues so "live" never reads as a status. */
+	--color-accent: #1f6f68;
+	--color-accent-hover: #195a54;
+	--color-accent-contrast: #ffffff;
+	--color-accent-soft: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+	--color-accent-tint: color-mix(in srgb, var(--color-accent) 12%, transparent);
+
+	/* Live/active-call indicator dot — a clear red "on the line" signal,
+	 * distinct from the teal accent and the muted rose status hues. One value
+	 * reads as red on both the light and dark row surfaces. */
+	--color-live-dot: #e5484d;
+
+	/* Status palette (tinted fg on a tinted surface; low-saturation, calm).
+	 * One pair per TicketStatus + a neutral fallback. Tuned for AA on the tint. */
+	--st-new-fg: #3a4f63; /* slate — fresh, neutral attention */
+	--st-new-bg: #e9edf1;
+	--st-progress-fg: #815209; /* amber — in motion */
+	--st-progress-bg: #f5ecd8;
+	--st-tested-fg: #444597; /* indigo — verification gate */
+	--st-tested-bg: #e9eaf6;
+	--st-closed-fg: #2f6440; /* green — resolved */
+	--st-closed-bg: #e4efe8;
+	--st-rejected-fg: #8f3d44; /* rose — won't-do, not alarming */
+	--st-rejected-bg: #f4e6e8;
+	--st-unknown-fg: #65635c; /* neutral fallback */
+	--st-unknown-bg: #ececea;
+
+	/* Health dot — mapped from /health.status. */
+	--health-ok: #3f8c5a;
+	--health-warn: #b3892f;
+	--health-idle: #b4b4ad;
+
+	/* Feedback (toasts) — reuse the status hues so the language is consistent. */
+	--color-success: var(--st-closed-fg);
+	--color-danger: var(--st-rejected-fg);
+	--color-info: var(--st-new-fg);
+
+	/* Solid destructive button (Confirm close) — a saturated rose that carries
+	 * white text at AA in both themes (distinct from --color-danger, which is the
+	 * *text* hue used on tints). */
+	--color-danger-solid: #9e3a41;
+	--color-on-danger: #ffffff;
+
+	/* Elevation */
+	--shadow-sm: 0 1px 2px rgba(28, 28, 26, 0.06);
+	--shadow-md: 0 6px 20px rgba(28, 28, 26, 0.1);
+
+	/* Skeleton shimmer stops */
+	--skeleton-1: #ededeb;
+	--skeleton-2: #f6f6f4;
+}
+
+/* ====================================================================== *
+ * DARK THEME — applied when the OS prefers dark (unless pinned to light), *
+ * or when the operator pins dark via the header toggle.                   *
+ * The two selectors carry identical token values.                         *
+ * ====================================================================== */
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme='light']) {
+		color-scheme: dark;
+
+		--color-bg: #141310;
+		--color-surface: #1c1b16;
+		--color-surface-2: #232219;
+		--color-border: #2c2b23;
+		--color-border-strong: #3a3930;
+		--color-text: #ece9e0;
+		--color-text-muted: #a3a097;
+		--color-text-faint: #74716a;
+
+		--color-accent: #4fb3a8;
+		--color-accent-hover: #66c3b8;
+		--color-accent-contrast: #06201d;
+		--color-accent-soft: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+		--color-accent-tint: color-mix(in srgb, var(--color-accent) 18%, transparent);
+
+		--st-new-fg: #aec3d6;
+		--st-new-bg: #222b34;
+		--st-progress-fg: #ddb46e;
+		--st-progress-bg: #2e2715;
+		--st-tested-fg: #b3b4e6;
+		--st-tested-bg: #232447;
+		--st-closed-fg: #8fc8a0;
+		--st-closed-bg: #182a1f;
+		--st-rejected-fg: #df9ea4;
+		--st-rejected-bg: #2f1e20;
+		--st-unknown-fg: #a6a39a;
+		--st-unknown-bg: #26251f;
+
+		--color-danger-solid: #a8454c;
+		--color-on-danger: #ffffff;
+
+		--health-ok: #5bb878;
+		--health-warn: #d2a44a;
+		--health-idle: #6a6960;
+
+		--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+		--shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+		--skeleton-1: #232219;
+		--skeleton-2: #2c2b22;
+	}
+}
+
+:root[data-theme='dark'] {
+	color-scheme: dark;
+
+	--color-bg: #141310;
+	--color-surface: #1c1b16;
+	--color-surface-2: #232219;
+	--color-border: #2c2b23;
+	--color-border-strong: #3a3930;
+	--color-text: #ece9e0;
+	--color-text-muted: #a3a097;
+	--color-text-faint: #74716a;
+
+	--color-accent: #4fb3a8;
+	--color-accent-hover: #66c3b8;
+	--color-accent-contrast: #06201d;
+	--color-accent-soft: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+	--color-accent-tint: color-mix(in srgb, var(--color-accent) 18%, transparent);
+
+	--st-new-fg: #aec3d6;
+	--st-new-bg: #222b34;
+	--st-progress-fg: #ddb46e;
+	--st-progress-bg: #2e2715;
+	--st-tested-fg: #b3b4e6;
+	--st-tested-bg: #232447;
+	--st-closed-fg: #8fc8a0;
+	--st-closed-bg: #182a1f;
+	--st-rejected-fg: #df9ea4;
+	--st-rejected-bg: #2f1e20;
+	--st-unknown-fg: #a6a39a;
+	--st-unknown-bg: #26251f;
+
+	--health-ok: #5bb878;
+	--health-warn: #d2a44a;
+	--health-idle: #6a6960;
+
+	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+	--shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+	--skeleton-1: #232219;
+	--skeleton-2: #2c2b22;
+}
+
+/* — Minimal reset — */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+/* Root font size drives EVERY rem token below (type scale, spacing, the 64rem
+ * page container, the ticket-grid columns). Anchoring it to viewport WIDTH makes
+ * the whole UI occupy a constant fraction of the browser window regardless of the
+ * physical display — a 16" and a 32" screen show the same proportions, just larger.
+ * clamp() keeps it readable on a small/half-width window and from exploding on an
+ * ultrawide. ~1.2vw → the page container spans ~77% of the window in the linear
+ * range. (Media-query breakpoints use the browser-default rem, so they're
+ * unaffected by this override.) */
+html {
+	-webkit-text-size-adjust: 100%;
+	font-size: clamp(15px, 1.2vw, 40px);
+}
+
+body {
+	margin: 0;
+	min-height: 100vh;
+	font-family: var(--font-ui);
+	font-size: 1rem;
+	line-height: 1.5;
+	color: var(--color-text);
+	background: var(--color-bg);
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+figure {
+	margin: 0;
+}
+
+a {
+	color: inherit;
+}
+
+button,
+input,
+textarea,
+select {
+	font: inherit;
+	color: inherit;
+}
+
+/* One consistent focus ring everywhere. :where() keeps specificity at 0 so a
+ * component can still refine it; most don't need to. */
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+	outline: var(--focus-width) solid var(--color-accent);
+	outline-offset: var(--focus-offset);
+}
+
+/* Tabular numerals everywhere we show numbers in mono. */
+code,
+kbd,
+samp,
+.mono {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+}

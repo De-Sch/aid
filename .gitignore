@@ -1,0 +1,39 @@
+# CMake / Ninja build trees
+build/
+build-*/
+_deps/
+
+# CMake-generated, symlinked to repo root by scripts/build.sh
+compile_commands.json
+
+# CTest scratch output (CTestCostData.txt, LastTest.log) when ctest runs at repo root
+Testing/
+
+# clangd / clang-tooling
+.cache/
+.clangd/
+
+# Reference call sender — local tooling, not shipped in the public repo
+telixCallHandler/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor swap files
+*.swp
+*.swo
+*~
+
+# SvelteKit / Node UI (ui/)
+ui/node_modules/
+ui/.svelte-kit/
+ui/build/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Runtime upload scratch dir (created by the daemon at runtime)
+uploads/

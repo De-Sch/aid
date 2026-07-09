@@ -1,0 +1,3 @@
+{"event": "Incoming Call", "remote": "017.....", "callid": "1756475499.79299", "dialed": "49........"}
+{"event": "Accepted Call", "callid": "1756475499.79299", "remote": "017.......", "dialed": "49........", "user": "name"}
+{"event": "Hangup", "callid": "1756475499.79299", "remote": "017..........."}

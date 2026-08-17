@@ -18,7 +18,7 @@ using aid::domain::CallLineFormatter;
 
 class CallLineFormatterTest : public ::testing::Test {
 protected:
-    // The daemon is pinned to Europe/Berlin. Mirror it so timestamp
+    // §13 pins the daemon to Europe/Berlin. Mirror it so timestamp
     // round-trips are deterministic across hosts.
     void SetUp() override {
         ::setenv("TZ", "Europe/Berlin", 1);
@@ -45,6 +45,37 @@ TEST_F(CallLineFormatterTest, BuildStartProducesCanonicalLine) {
     const auto out = CallLineFormatter::buildStart(UserHandle{"alice"},
                                                    mkLocal(2026, 5, 20, 14, 0, 0), CallId{"X.1"});
     EXPECT_EQ(out, "alice: Call start: 2026-05-20 14:00:00 (X.1)");
+}
+
+// --- buildMissed ------------------------------------------------------
+
+TEST_F(CallLineFormatterTest, BuildMissedProducesCanonicalLine) {
+    EXPECT_EQ(CallLineFormatter::buildMissed(mkLocal(2026, 8, 17, 12, 37, 54)),
+              "Missed call: 2026-08-17 12:37:54");
+}
+
+TEST_F(CallLineFormatterTest, MissedLineIsInvisibleToEveryScanner) {
+    // No user, no callid, neither "Call start:" nor "Call End:" — nothing here
+    // can select it, so it can never surface as a live call on the dashboard.
+    const std::string desc = CallLineFormatter::buildMissed(mkLocal(2026, 8, 17, 12, 37, 54));
+    EXPECT_FALSE(CallLineFormatter::parseStart(desc).has_value());
+    EXPECT_FALSE(CallLineFormatter::findLineFor(desc, CallId{"X.1"}).has_value());
+    EXPECT_FALSE(CallLineFormatter::findOpenLineForUser(desc, UserHandle{"alice"}).has_value());
+    EXPECT_TRUE(CallLineFormatter::findUsersWithOpenCalls(desc).empty());
+    EXPECT_FALSE(CallLineFormatter::hasLine(desc, UserHandle{"alice"}, CallId{"X.1"}));
+}
+
+TEST_F(CallLineFormatterTest, MissedLineDoesNotHideALiveCallOnTheSameTicket) {
+    // A caller rings back while an earlier call is still up: the missed line
+    // lands beside an OPEN line, which must still be found.
+    const std::string desc =
+        CallLineFormatter::buildStart(UserHandle{"alice"}, mkLocal(2026, 8, 17, 12, 30, 0),
+                                      CallId{"X.1"}) +
+        "\n" + CallLineFormatter::buildMissed(mkLocal(2026, 8, 17, 12, 37, 54));
+    const auto open = CallLineFormatter::findOpenLineForUser(desc, UserHandle{"alice"});
+    ASSERT_TRUE(open.has_value());
+    EXPECT_EQ(open->v, "X.1");
+    EXPECT_EQ(CallLineFormatter::findUsersWithOpenCalls(desc).size(), 1U);
 }
 
 // --- findLineFor ------------------------------------------------------
@@ -89,7 +120,7 @@ TEST(CallLineFormatterRewriteUser, ReplacesPrefix) {
 }
 
 TEST(CallLineFormatterRewriteUser, NoColonReturnsInputUnchanged) {
-    // Graceful — don't crash a broken line.
+    // §B.2: graceful — don't crash a broken line.
     EXPECT_EQ(CallLineFormatter::rewriteUser("no colon here", UserHandle{"bob"}), "no colon here");
 }
 
@@ -143,8 +174,8 @@ TEST_F(CallLineFormatterTest, ParseStartUnparseableTimestampReturnsNullopt) {
 // --- findOpenLineForUser ----------------------------------------------
 
 TEST(CallLineFormatterFindOpenLineForUser, ReturnsFirstOpenCallId) {
-    // Supersedes the old "most recent line wins" rfind: when a user has two open
-    // lines, the FIRST open one wins. Scanning forward keeps
+    // Supersedes B.2's "most recent line wins" rfind: when a user has two open
+    // lines, the FIRST open one wins (docs/issues/0003). Scanning forward keeps
     // this in lock-step with findUsersWithOpenCalls' first-seen order.
     const std::string desc = "alice: Call start: 2026-05-20 14:00:00 (X.1)\n"
                              "alice: Call start: 2026-05-20 14:05:00 (X.2)\n";
@@ -154,8 +185,8 @@ TEST(CallLineFormatterFindOpenLineForUser, ReturnsFirstOpenCallId) {
 }
 
 TEST(CallLineFormatterFindOpenLineForUser, EarlierOpenLaterClosedReportsTheOpenCall) {
-    // The bug this fixes: an earlier still-open call followed by
-    // a later already-hung-up call on the same ticket. The old rfind landed on the
+    // The bug fixed in docs/issues/0003: an earlier still-open call followed by
+    // a later already-hung-up call on the same ticket. B.2's rfind landed on the
     // closed line and wrongly reported "no active call." We must surface the
     // open call's callid (X.1), not nullopt.
     const std::string desc = "alice: Call start: 2026-05-20 14:00:00 (X.1)\n"
@@ -168,7 +199,7 @@ TEST(CallLineFormatterFindOpenLineForUser, EarlierOpenLaterClosedReportsTheOpenC
 
 TEST(CallLineFormatterFindOpenLineForUser, AgreesWithFindUsersWithOpenCallsOnMultiCallTicket) {
     // The two detectors must agree on WHETHER a user holds an open call, for any
-    // multi-line arrangement.
+    // multi-line arrangement (docs/issues/0003 acceptance criterion).
     const std::string desc = "alice: Call start: 2026-05-20 14:00:00 (X.1)\n"
                              "alice: Call start: 2026-05-20 14:05:00 Call End: "
                              "2026-05-20 14:10:00\n"
@@ -217,7 +248,7 @@ TEST(CallLineFormatterHasLine, CorrectCallIdWrongUserReturnsFalse) {
 }
 
 TEST(CallLineFormatterHasLine, FindsMatchAmongMultipleSameUserLines) {
-    // Dedup test must work across multiple lines for the same user.
+    // §4.2.6: dedup test must work across multiple lines for the same user.
     const std::string desc = "alice: Call start: 2026-05-20 14:00:00 (X.1)\n"
                              "alice: Call start: 2026-05-20 14:05:00 (X.2)\n";
     EXPECT_TRUE(CallLineFormatter::hasLine(desc, UserHandle{"alice"}, CallId{"X.2"}));

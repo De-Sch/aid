@@ -26,7 +26,7 @@ HandleHangup::HandleHangup(aid::ports::TicketStore& ts, aid::ports::UiNotifier& 
 
 Task<Result<void>> HandleHangup::run(const aid::HangupCall& ev) {
     // Step 1: lookup by callid substring. Missing ticket is a critical
-    // error here — the only event that promotes "not found".
+    // error here — the only event that promotes "not found" (§4.4.2).
     auto found = co_await ts_.findByCallidContains(ev.callid);
     if (!found) {
         co_return aid::plumbing::unexpected{found.error()};
@@ -47,8 +47,8 @@ Task<Result<void>> HandleHangup::run(const aid::HangupCall& ev) {
     // The mutation is a pure delta applied to the freshly fetched ticket inside
     // save() (re-applied on every 409). It must read the ticket's CURRENT
     // callLength / callIds and edit them — never replace them from a snapshot —
-    // so a concurrent same-ticket hangup/transfer is not clobbered. The
-    // CallLineFormatter / CallTracker logic
+    // so a concurrent same-ticket hangup/transfer is not clobbered
+    // (docs/issues/0001). The CallLineFormatter (B.2) / CallTracker (B.1) logic
     // is unchanged; only WHERE it runs moved (use-case body → reducer closure).
     //
     // Hoist the reducer to a named local: a lambda/std::function temporary left
@@ -67,6 +67,14 @@ Task<Result<void>> HandleHangup::run(const aid::HangupCall& ev) {
             const std::string line = t.callLength.substr(sp->begin, sp->end - sp->begin);
             const std::string closed = aid::domain::CallLineFormatter::complete(line, now);
             t.callLength.replace(sp->begin, sp->end - sp->begin, closed);
+        } else {
+            // No line for this callid: nobody accepted, so the call rang out.
+            // (Only an accepted call opens a line, and hangups arrive for
+            // incoming calls only.)
+            if (!t.callLength.empty()) {
+                t.callLength += "\n";
+            }
+            t.callLength += aid::domain::CallLineFormatter::buildMissed(now);
         }
 
         // Remove the callid from the encoded list.

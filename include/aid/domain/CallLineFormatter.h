@@ -14,18 +14,23 @@ namespace aid::domain {
 // lines inside `ticket.callLength`. Used by Accept (build), Transfer
 // (rewriteUser), Hangup (complete), and Dashboard (findOpenLineForUser).
 //
-// Line formats:
+// Algorithm body is the verbatim translation of
+// plan/imporanat_backend_stuff.txt §B.2. Line formats:
 //   open      : "{user}: Call start: {YYYY-MM-DD HH:MM:SS} ({callid})"
 //   completed : "{user}: Call start: {start} Call End: {end}"
+//   missed    : "Missed call: {YYYY-MM-DD HH:MM:SS}"
 // The "({callid})" lives on the OPEN line only — it is what findLineFor matches
 // to locate the line while the call is live, and it is dropped when the line is
 // completed (the callid is then dead weight and confuses operators). The
 // "Call End:" marker is what flags a line as closed — see findOpenLineForUser /
 // findUsersWithOpenCalls. (Call duration was removed.)
+// The missed line has no user and no callid, so none of the lookups below match
+// it — it can never be read as a live call.
 class CallLineFormatter {
 public:
     static constexpr std::string_view CALL_START_PREFIX = ": Call start: ";
     static constexpr std::string_view CALL_START_PATTERN = ": Call start:";
+    static constexpr std::string_view MISSED_PREFIX = "Missed call: ";
 
     struct LineSpan {
         std::size_t begin;
@@ -38,6 +43,9 @@ public:
 
     [[nodiscard]] static std::string buildStart(const UserHandle& user, const Timestamp& start,
                                                 const CallId& callid);
+
+    // Appended on hangup when the call was never accepted.
+    [[nodiscard]] static std::string buildMissed(const Timestamp& at);
 
     [[nodiscard]] static std::optional<LineSpan> findLineFor(std::string_view description,
                                                              const CallId& callid);
@@ -55,7 +63,7 @@ public:
     // matching "Call End:") anywhere in `description`, in first-seen order.
     // Dashboard-support companion to findOpenLineForUser: lets a viewer see
     // which OTHER users hold a live call on a ticket. Reuses parseStart and
-    // the same fixed line format; the shared parsing bodies are untouched.
+    // the same fixed B.2 line format; the verbatim B.2 bodies are untouched.
     [[nodiscard]] static std::vector<UserHandle>
     findUsersWithOpenCalls(std::string_view description);
 

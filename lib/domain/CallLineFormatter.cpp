@@ -15,7 +15,7 @@ namespace aid::domain {
 
 namespace {
 
-// Local-time rendering at "YYYY-MM-DD HH:MM:SS" — the TZ is fixed to
+// Local-time rendering at "YYYY-MM-DD HH:MM:SS" — §9 + §13 fix the TZ to
 // Europe/Berlin daemon-wide.
 std::string formatLocalTimestamp(const Timestamp& ts) {
     const auto t = std::chrono::system_clock::to_time_t(ts);
@@ -56,6 +56,10 @@ std::string CallLineFormatter::buildStart(const UserHandle& user, const Timestam
     out += callid.v;
     out += ")";
     return out;
+}
+
+std::string CallLineFormatter::buildMissed(const Timestamp& at) {
+    return std::string{MISSED_PREFIX} + formatLocalTimestamp(at);
 }
 
 std::optional<CallLineFormatter::LineSpan>
@@ -126,8 +130,9 @@ std::optional<CallLineFormatter::ParsedStart> CallLineFormatter::parseStart(std:
 
 std::optional<CallId> CallLineFormatter::findOpenLineForUser(std::string_view description,
                                                              const UserHandle& user) {
-    // Supersedes the old `rfind` "most-recent-line-wins" idiom, which inspected
-    // only the LAST matching line, so on a multi-call ticket where the user had an
+    // SUPERSEDES frozen B.2's `rfind` "most-recent-line-wins" idiom (see
+    // .claude/rules/verbatim.md and docs/issues/0003). B.2 inspected only the
+    // LAST matching line, so on a multi-call ticket where the user had an
     // earlier still-open call and a later already-hung-up one, rfind landed on
     // the closed line and reported "no active call." We now scan EVERY line —
     // mirroring findUsersWithOpenCalls — and return the callid of the FIRST

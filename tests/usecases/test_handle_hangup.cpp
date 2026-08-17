@@ -9,6 +9,7 @@
 #include "FakeClock.h"
 #include "FakeTicketStore.h"
 #include "FakeUiNotifier.h"
+#include "aid/domain/CallLineFormatter.h"
 #include "aid/plumbing/Error.h"
 #include "aid/plumbing/Result.h"
 #include "aid/usecases/HandleHangup.h"
@@ -26,6 +27,7 @@ using aid::Ticket;
 using aid::TicketId;
 using aid::TicketStatus;
 using aid::UserHandle;
+using aid::domain::CallLineFormatter;
 using aid::fakes::FakeClock;
 using aid::fakes::FakeTicketStore;
 using aid::fakes::FakeUiNotifier;
@@ -120,7 +122,9 @@ TEST_F(HandleHangupTest, NoTicket_IsCriticalError) {
     EXPECT_TRUE(ui_.invalidateScopes.empty());
 }
 
-TEST_F(HandleHangupTest, LineMissing_StillSaves_StillStampsEnd_StillShrinksList) {
+TEST_F(HandleHangupTest, LineMissing_RecordsMissedCall_StillStampsEnd_StillShrinksList) {
+    // No line for this callid means nobody ever accepted. This used to leave
+    // callLength untouched, so a rung-out call left no trace at all.
     clock_.now_ = aid::Timestamp{} + std::chrono::hours(24 * 365 * 56);
     auto t =
         makeTicket(TicketId{"T1"}, {CallId{"call-1"}}, "unrelated call-log with no matching line");
@@ -133,9 +137,41 @@ TEST_F(HandleHangupTest, LineMissing_StillSaves_StillStampsEnd_StillShrinksList)
 
     ASSERT_TRUE(r.has_value());
     ASSERT_EQ(ts_.saved.size(), 1U);
-    EXPECT_EQ(ts_.saved[0].callLength, before) << "no matching line means callLength is untouched";
+    EXPECT_EQ(ts_.saved[0].callLength, before + "\n" + CallLineFormatter::buildMissed(clock_.now_))
+        << "the missed line is appended below what was already there";
     EXPECT_TRUE(ts_.saved[0].callIds.empty()) << "callid still removed from the list";
     EXPECT_TRUE(ts_.saved[0].callEnd.has_value());
+}
+
+TEST_F(HandleHangupTest, MissedCall_OnAnEmptyLogIsTheOnlyLine) {
+    clock_.now_ = aid::Timestamp{} + std::chrono::hours(24 * 365 * 56);
+    auto t = makeTicket(TicketId{"T1"}, {CallId{"call-1"}}, "");
+    ts_.nextFindByCallidContains.push_back(std::optional<Ticket>{t});
+    ts_.nextSave.push_back(t);
+
+    auto uc = makeUseCase();
+    ASSERT_TRUE(sync(uc.run(ev())).has_value());
+
+    ASSERT_EQ(ts_.saved.size(), 1U);
+    EXPECT_EQ(ts_.saved[0].callLength, CallLineFormatter::buildMissed(clock_.now_))
+        << "no leading newline on an empty call log";
+    EXPECT_EQ(ts_.saved[0].status, TicketStatus::InProgress) << "a missed call changes no status";
+}
+
+TEST_F(HandleHangupTest, AcceptedCall_CompletesTheLine_AndLogsNoMissedCall) {
+    clock_.now_ = aid::Timestamp{} + std::chrono::hours(24 * 365 * 56);
+    auto t = makeTicket(TicketId{"T1"}, {CallId{"call-1"}},
+                        "alice: Call start: 2026-05-20 10:00:00 (call-1)");
+    ts_.nextFindByCallidContains.push_back(std::optional<Ticket>{t});
+    ts_.nextSave.push_back(t);
+
+    auto uc = makeUseCase();
+    ASSERT_TRUE(sync(uc.run(ev())).has_value());
+
+    ASSERT_EQ(ts_.saved.size(), 1U);
+    EXPECT_NE(ts_.saved[0].callLength.find("Call End:"), std::string::npos);
+    EXPECT_EQ(ts_.saved[0].callLength.find(CallLineFormatter::MISSED_PREFIX), std::string::npos)
+        << "an answered call must never be logged as missed";
 }
 
 TEST_F(HandleHangupTest, FindError_Propagates) {
